@@ -23,8 +23,7 @@ if __name__ == "__main__":
         "neurocuts-easy-adaptive-bignet": {
             "run": run_neurocuts,
             "config": {
-                "rules":
-                grid_search([
+                "rules": grid_search([
                     #                    os.path.abspath("classbench/acl1_100"),
                     os.path.abspath("classbench/acl1_200"),
                     os.path.abspath("classbench/acl1_500"),
@@ -32,12 +31,9 @@ if __name__ == "__main__":
                     os.path.abspath("classbench/acl1_10K"),
                     #                    os.path.abspath("classbench/acl1_100K"),
                 ]),
-                "penalty":
-                grid_search([False]),
-                "gamma":
-                grid_search([0.99]),
-                "onehot_state":
-                grid_search([True]),
+                "penalty": grid_search([False]),
+                "gamma": grid_search([0.99]),
+                "onehot_state": grid_search([True]),
             },
         },
     })

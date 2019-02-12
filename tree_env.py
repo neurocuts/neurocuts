@@ -73,10 +73,9 @@ class TreeEnv(MultiAgentEnv):
             Discrete(max_cuts_per_dimension + self.num_part_levels)
         ])
         self.observation_space = Dict({
-            "real_obs":
-            Box(0, 1, (278, ), dtype=np.float32),
-            "action_mask":
-            Box(0,
+            "real_obs": Box(0, 1, (278, ), dtype=np.float32),
+            "action_mask": Box(
+                0,
                 1, (5 + max_cuts_per_dimension + self.num_part_levels, ),
                 dtype=np.float32),
         })
@@ -177,37 +176,24 @@ class TreeEnv(MultiAgentEnv):
                 for r in n.rules:
                     rules_remaining.add(str(r))
             info[self.tree.root.id] = {
-                "bytes_per_rule":
-                result["bytes_per_rule"],
-                "memory_access":
-                result["memory_access"],
-                "exceeded_max_depth":
-                len(self.exceeded_max_depth),
-                "tree_depth":
-                self.tree.get_depth(),
-                "tree_stats":
-                self.tree.get_stats(),
-                "tree_stats_str":
-                self.tree.stats_str(),
-                "nodes_remaining":
-                len(nodes_remaining),
-                "rules_remaining":
-                len(rules_remaining),
-                "num_nodes":
-                len(self.node_map),
-                "useless_fraction":
-                float(
+                "bytes_per_rule": result["bytes_per_rule"],
+                "memory_access": result["memory_access"],
+                "exceeded_max_depth": len(self.exceeded_max_depth),
+                "tree_depth": self.tree.get_depth(),
+                "tree_stats": self.tree.get_stats(),
+                "tree_stats_str": self.tree.stats_str(),
+                "nodes_remaining": len(nodes_remaining),
+                "rules_remaining": len(rules_remaining),
+                "num_nodes": len(self.node_map),
+                "useless_fraction": float(
                     len([n for n in self.node_map.values()
                          if n.is_useless()])) / len(self.node_map),
-                "partition_fraction":
-                float(
+                "partition_fraction": float(
                     len([
                         n for n in self.node_map.values() if n.is_partition()
                     ])) / len(self.node_map),
-                "num_splits":
-                self.num_actions,
-                "rules_file":
-                self.rules_file,
+                "num_splits": self.num_actions,
+                "rules_file": self.rules_file,
             }
             if not nodes_remaining and self.dump_dir:
                 self.save_if_best(result)
@@ -233,7 +219,8 @@ class TreeEnv(MultiAgentEnv):
         if save:
             out = os.path.join(
                 self.dump_dir, "{}-{}-acc-{}-bytes-{}.pkl".format(
-                    os.path.basename(self.rules_file), time_stat, space_stat, time.time()))
+                    os.path.basename(self.rules_file), time_stat, space_stat,
+                    time.time()))
             with open(out, "wb") as f:
                 pickle.dump(self.tree, f)
 
@@ -281,10 +268,9 @@ class TreeEnv(MultiAgentEnv):
     def _zeros(self):
         zeros = [0] * 278
         return {
-            "real_obs":
-            zeros,
-            "action_mask":
-            [1] * (5 + self.max_cuts_per_dimension + self.num_part_levels),
+            "real_obs": zeros,
+            "action_mask": [1] *
+            (5 + self.max_cuts_per_dimension + self.num_part_levels),
         }
 
     def _encode_state(self, node):

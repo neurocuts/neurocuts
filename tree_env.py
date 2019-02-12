@@ -50,6 +50,8 @@ class TreeEnv(MultiAgentEnv):
         self.dump_dir = os.path.expanduser(dump_dir)
         if self.dump_dir:
             os.makedirs(self.dump_dir, exist_ok=True)
+        self.best_time = float("inf")
+        self.best_space = float("inf")
 
         self.depth_weight = depth_weight
         self.rules_file = rules_file
@@ -208,11 +210,7 @@ class TreeEnv(MultiAgentEnv):
                 self.rules_file,
             }
             if not nodes_remaining and self.dump_dir:
-                out = os.path.join(
-                    self.dump_dir, "tree-{}-{}.pkl".format(
-                        result["memory_access"], time.time()))
-                with open(out, "wb") as f:
-                    pickle.dump(self.tree, f)
+                self.save_if_best(result)
             return obs, rew, {"__all__": True}, info
 
         needs_split = [self.tree.get_current_node()]
@@ -221,6 +219,23 @@ class TreeEnv(MultiAgentEnv):
         done.update({"__all__": False})
         info.update({s.id: {} for s in needs_split})
         return obs, rew, done, info
+
+    def save_if_best(self, result):
+        time_stat = result["memory_access"]
+        space_stat = result["bytes_per_rule"]
+        save = False
+        if time_stat < best_time:
+            best_time = time_stat
+            save = True
+        if space_stat < best_space:
+            best_space = space_stat
+            save = True
+        if save:
+            out = os.path.join(
+                self.dump_dir, "{}-{}-acc-{}-bytes-{}.pkl".format(
+                    os.path.basename(self.rules_file), time_stat, space_stat, time.time()))
+            with open(out, "wb") as f:
+                pickle.dump(self.tree, f)
 
     def action_tuple_to_cut(self, node, action):
         cut_dimension = action[0]

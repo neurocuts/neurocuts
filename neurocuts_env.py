@@ -10,18 +10,17 @@ from ray.rllib.env import MultiAgentEnv
 from tree import Tree, load_rules_from_file
 from hicuts import HiCuts
 
+NUM_DIMENSIONS = 5
 NUM_PART_LEVELS = 6  # 2%, 4%, 8%, 16%, 32%, 64%
 
 
 class NeuroCutsEnv(MultiAgentEnv):
-    """NeuroCuts multiagent tree building environment.
+    """NeuroCuts multi-agent tree building environment.
 
-    In this env, we aggregate rewards at the end of the episode and
-    assign each cut its reward based on the policy performance (actual depth).
-
-    Both modes are modeled as a multi-agent environment. Each "cut" in the tree
-    is an action taken by a different agent. All the agents share the same
-    policy.
+    In this env, each "cut" in the tree is an action taken by a
+    different agent. All the agents share the same policy. We
+    aggregate rewards at the end of the episode and assign each
+    cut its reward based on the policy performance (actual depth).
     """
 
     def __init__(self,
@@ -69,14 +68,14 @@ class NeuroCutsEnv(MultiAgentEnv):
         else:
             self.num_part_levels = 0
         self.action_space = Tuple([
-            Discrete(5),
+            Discrete(NUM_DIMENSIONS),
             Discrete(max_cuts_per_dimension + self.num_part_levels)
         ])
         self.observation_space = Dict({
             "real_obs": Box(0, 1, (278, ), dtype=np.float32),
             "action_mask": Box(
                 0,
-                1, (5 + max_cuts_per_dimension + self.num_part_levels, ),
+                1, (NUM_DIMENSIONS + max_cuts_per_dimension + self.num_part_levels, ),
                 dtype=np.float32),
         })
 
@@ -185,9 +184,6 @@ class NeuroCutsEnv(MultiAgentEnv):
                 "nodes_remaining": len(nodes_remaining),
                 "rules_remaining": len(rules_remaining),
                 "num_nodes": len(self.node_map),
-                "useless_fraction": float(
-                    len([n for n in self.node_map.values()
-                         if n.is_useless()])) / len(self.node_map),
                 "partition_fraction": float(
                     len([
                         n for n in self.node_map.values() if n.is_partition()
@@ -275,11 +271,11 @@ class NeuroCutsEnv(MultiAgentEnv):
 
     def _encode_state(self, node):
         if node.depth > 1:
-            action_mask = ([1] * (5 + self.max_cuts_per_dimension) +
+            action_mask = ([1] * (NUM_DIMENSIONS + self.max_cuts_per_dimension) +
                            [0] * self.num_part_levels)
         else:
             assert node.depth == 1, node.depth
-            action_mask = ([1] * (5 + self.max_cuts_per_dimension) +
+            action_mask = ([1] * (NUM_DIMENSIONS + self.max_cuts_per_dimension) +
                            [1] * self.num_part_levels)
         return {
             "real_obs": node.get_state(),

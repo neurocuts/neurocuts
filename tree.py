@@ -157,10 +157,14 @@ class Node:
 
     def match(self, packet):
         if self.is_partition():
+            matches = []
             for c in self.children:
                 match = c.match(packet)
                 if match:
-                    return match
+                    matches.append(match)
+            if matches:
+                matches.sort(key=lambda r: self.rules.index(r))
+                return matches[0]
             return None
         elif self.children:
             for n in self.children:

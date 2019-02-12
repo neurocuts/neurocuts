@@ -45,7 +45,8 @@ def check_classification(tree):
 
 def check_invariants(node):
     if node.children:
-        _check_disjointness(node.children)
+        if not node.is_partition():
+            _check_disjointness(node.children)
         _check_rule_distribution(node)
         for c in node.children:
             check_invariants(c)

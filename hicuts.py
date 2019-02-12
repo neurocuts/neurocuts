@@ -1,8 +1,7 @@
 import math
 import datetime
 
-# from tree import *
-from tree_mem import *
+from tree import *
 
 
 class HiCuts(object):

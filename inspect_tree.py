@@ -34,9 +34,9 @@ def check_classification(tree):
             if r.matches(packet):
                 expected_match = r
                 break
-        expected_match = tree.rules.index(expected_match)
         actual_match = tree.match(packet)
-        actual_match = tree.rules.index(actual_match)
+        expected_match = expected_match and tree.rules.index(expected_match)
+        actual_match = actual_match and tree.rules.index(actual_match)
         if expected_match != actual_match:
             print("actual", actual_match, "expected", expected_match)
             failures += 1

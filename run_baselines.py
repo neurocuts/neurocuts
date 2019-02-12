@@ -40,7 +40,7 @@ def gen_rules():
             exe_cmd(cmd)
 
 
-EXPRS = ["seed_1000"]
+EXPRS = ["1k"]
 
 
 def run_hicuts():

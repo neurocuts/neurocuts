@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--rules",
     type=lambda expr: [
         os.path.abspath("classbench/{}".format(r)) for r in expr.split(",")],
-    default="acl1_seed_1000",
+    default="acl5_1k",
     help="Rules file name or list of rules files separated by comma.")
 
 parser.add_argument(
@@ -129,7 +129,7 @@ if __name__ == "__main__":
                 "num_workers": args.num_workers,
                 "sgd_minibatch_size": 100 if args.fast else 1000,
                 "sample_batch_size": 200 if args.fast else 5000,
-                "train_batch_size": 2000 if args.fast else 15000,
+                "train_batch_size": 1000 if args.fast else 15000,
                 "batch_mode": "complete_episodes",
                 "observation_filter": "NoFilter",
                 "model": {

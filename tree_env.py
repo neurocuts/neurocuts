@@ -210,11 +210,11 @@ class TreeEnv(MultiAgentEnv):
         time_stat = result["memory_access"]
         space_stat = result["bytes_per_rule"]
         save = False
-        if time_stat < best_time:
-            best_time = time_stat
+        if time_stat < self.best_time:
+            self.best_time = time_stat
             save = True
-        if space_stat < best_space:
-            best_space = space_stat
+        if space_stat < self.best_space:
+            self.best_space = space_stat
             save = True
         if save:
             out = os.path.join(

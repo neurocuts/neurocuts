@@ -13,7 +13,7 @@ from hicuts import HiCuts
 NUM_PART_LEVELS = 6  # 2%, 4%, 8%, 16%, 32%, 64%
 
 
-class TreeEnv(MultiAgentEnv):
+class NeuroCutsEnv(MultiAgentEnv):
     """NeuroCuts multiagent tree building environment.
 
     In this env, we aggregate rewards at the end of the episode and
@@ -47,7 +47,7 @@ class TreeEnv(MultiAgentEnv):
         else:
             self.force_partition = False
 
-        self.dump_dir = os.path.expanduser(dump_dir)
+        self.dump_dir = dump_dir and os.path.expanduser(dump_dir)
         if self.dump_dir:
             os.makedirs(self.dump_dir, exist_ok=True)
         self.best_time = float("inf")
@@ -207,8 +207,8 @@ class TreeEnv(MultiAgentEnv):
         return obs, rew, done, info
 
     def save_if_best(self, result):
-        time_stat = result["memory_access"]
-        space_stat = result["bytes_per_rule"]
+        time_stat = int(result["memory_access"])
+        space_stat = int(result["bytes_per_rule"])
         save = False
         if time_stat < self.best_time:
             self.best_time = time_stat

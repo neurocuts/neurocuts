@@ -15,7 +15,7 @@ from ray.tune import run_experiments, grid_search
 from ray.tune.registry import register_env
 from ray.rllib.agents.ppo.ppo_policy_graph import PPOPolicyGraph
 
-from tree_env import TreeEnv
+from neurocuts_env import NeuroCutsEnv
 from mask import PartitionMaskModel
 
 parser = argparse.ArgumentParser()
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     ray.init(redis_address=args.redis_address)
 
     register_env(
-        "tree_env", lambda env_config: TreeEnv(
+        "tree_env", lambda env_config: NeuroCutsEnv(
             env_config["rules"],
             max_depth=env_config["max_depth"],
             max_actions_per_episode=env_config["max_actions"],

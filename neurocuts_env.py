@@ -40,8 +40,8 @@ class NeuroCutsEnv(MultiAgentEnv):
             "log": lambda x: np.log(x),
         }[reward_shape]
 
-        assert partition_mode in [None, "top", "efficuts", "cutsplit"]
-        self.partition_enabled = partition_mode == "top"
+        assert partition_mode in [None, "simple", "efficuts", "cutsplit"]
+        self.partition_enabled = partition_mode == "simple"
         if partition_mode in ["efficuts", "cutsplit"]:
             self.force_partition = partition_mode
         else:

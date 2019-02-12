@@ -41,7 +41,7 @@ parser.add_argument(
     "--partition-mode",
     type=str,
     default=None,
-    help="Set the partitioner: [None, 'top', 'efficuts', 'cutsplit'].")
+    help="Set the partitioner: [None, 'simple', 'efficuts', 'cutsplit'].")
 
 parser.add_argument(
     "--reward-shape",

@@ -217,6 +217,7 @@ class NeuroCutsEnv(MultiAgentEnv):
                 self.dump_dir, "{}-{}-acc-{}-bytes-{}.pkl".format(
                     os.path.basename(self.rules_file), time_stat, space_stat,
                     time.time()))
+            print("Saving tree to {}".format(out))
             with open(out, "wb") as f:
                 pickle.dump(self.tree, f)
 

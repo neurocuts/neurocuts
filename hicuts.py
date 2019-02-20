@@ -56,7 +56,7 @@ class HiCuts(object):
         print(datetime.datetime.now(), "Algorithm HiCuts")
         tree = self.build_tree()
 
-        result = tree.result
+        result = tree.compute_result()
         result["bytes_per_rule"] = result["bytes_per_rule"] / len(tree.rules)
         print("------mem_result-----")
         print("%s Result %d %d %d" %

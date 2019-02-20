@@ -140,7 +140,6 @@ class Node:
         self.rules = rules
         self.depth = depth
         self.children = []
-        self.state = self.compute_state()
         self.action = None
         self.pushup_rules = None
 
@@ -219,7 +218,7 @@ class Node:
         new_rules.reverse()
         return new_rules
 
-    def compute_state(self):
+    def get_state(self):
         state = []
         state.extend(to_bits(self.ranges[0], 32))
         state.extend(to_bits(self.ranges[1] - 1, 32))
@@ -263,9 +262,6 @@ class Node:
             partition_state[self.manual_partition] = 1
             state.extend(partition_state)
         return np.array(state)
-
-    def get_state(self):
-        return self.state
 
     def __str__(self):
         result = "ID:%d\tAction:%s\tDepth:%d\tRange:\t%s\nChildren: " % (
@@ -613,7 +609,6 @@ class Tree:
             node.ranges[i * 2] = max(new_ranges[i * 2], node.ranges[i * 2])
             node.ranges[i * 2 + 1] = min(new_ranges[i * 2 + 1],
                                          node.ranges[i * 2 + 1])
-        # node.compute_state()
 
     def refinement_rule_pushup(self):
         nodes_by_layer = [None for i in range(self.depth)]

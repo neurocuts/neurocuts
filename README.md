@@ -9,7 +9,7 @@ You can train a NeuroCuts policy for the small `acl5_1k` rule set using the foll
 python run_neurocuts.py --rules=acl5_1k --fast
 ```
 
-To monitor training progress, open `tensorboard --logdir=~/ray-results` and navigate to the web UI. The important metrics to pay attention to are `rules_remaining_min` (this must reach zero before the policy starts generating "valid" trees), `memory_access_valid_min` (access time metric for valid trees), `bytes_per_rule_valid_min` (bytes per rule metric for valid trees), and `vf_explained_var` (explained variance of the value function, which approaches 1 as the policy converges):
+To monitor training progress, open `tensorboard --logdir=~/ray_results` and navigate to the web UI. The important metrics to pay attention to are `rules_remaining_min` (this must reach zero before the policy starts generating "valid" trees), `memory_access_valid_min` (access time metric for valid trees), `bytes_per_rule_valid_min` (bytes per rule metric for valid trees), and `vf_explained_var` (explained variance of the value function, which approaches 1 as the policy converges):
 
 ![stats](tensorboard.png)
 

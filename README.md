@@ -1,6 +1,6 @@
 # NeuroCuts
 
-NeuroCuts is a deep RL algorithm for generating optimized packet classification trees. See the [preprint](https://arxiv.org) for an overview.
+NeuroCuts is a deep RL algorithm for generating optimized packet classification trees. See the [preprint](https://arxiv.org/abs/1902.10319) for an overview.
 
 ## Running NeuroCuts
 

@@ -32,12 +32,14 @@ class NeuroCutsEnv(MultiAgentEnv):
                  partition_mode=None,
                  reward_shape="linear",
                  depth_weight=1.0,
-                 dump_dir=None):
+                 dump_dir=None,
+                 zero_obs=False):
 
         self.reward_shape = {
             "linear": lambda x: x,
             "log": lambda x: np.log(x),
         }[reward_shape]
+        self.zero_obs = zero_obs
 
         assert partition_mode in [None, "simple", "efficuts", "cutsplit"]
         self.partition_enabled = partition_mode == "simple"
@@ -48,7 +50,10 @@ class NeuroCutsEnv(MultiAgentEnv):
 
         self.dump_dir = dump_dir and os.path.expanduser(dump_dir)
         if self.dump_dir:
-            os.makedirs(self.dump_dir, exist_ok=True)
+            try:
+                os.makedirs(self.dump_dir)
+            except:
+                pass
         self.best_time = float("inf")
         self.best_space = float("inf")
 
@@ -276,9 +281,10 @@ class NeuroCutsEnv(MultiAgentEnv):
                            [0] * self.num_part_levels)
         else:
             assert node.depth == 1, node.depth
-            action_mask = ([1] * (NUM_DIMENSIONS + self.max_cuts_per_dimension) +
-                           [1] * self.num_part_levels)
+            action_mask = ([1] * (NUM_DIMENSIONS + self.max_cuts_per_dimension)
+                           + [1] * self.num_part_levels)
+        s = node.get_state()
         return {
-            "real_obs": node.get_state(),
+            "real_obs": np.zeros_like(s) if self.zero_obs else s,
             "action_mask": action_mask,
         }

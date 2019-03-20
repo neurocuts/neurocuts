@@ -113,7 +113,8 @@ if __name__ == "__main__":
             dump_dir=env_config["dump_dir"],
             depth_weight=env_config["depth_weight"],
             reward_shape=env_config["reward_shape"],
-            partition_mode=env_config["partition_mode"]))
+            partition_mode=env_config["partition_mode"],
+            zero_obs=env_config["zero_obs"]))
 
     ModelCatalog.register_custom_model("mask", PartitionMaskModel)
 
@@ -142,6 +143,7 @@ if __name__ == "__main__":
                     "on_episode_end": tune.function(on_episode_end),
                 },
                 "env_config": {
+                    "zero_obs": False,
                     "dump_dir": args.dump_dir,
                     "partition_mode": args.partition_mode,
                     "reward_shape": args.reward_shape,

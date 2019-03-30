@@ -84,7 +84,7 @@ class NeuroCutsEnv(MultiAgentEnv):
             Discrete(max_cuts_per_dimension + self.num_part_levels)
         ])
         self.observation_space = Dict({
-            "real_obs": Box(0, 1, (278, ), dtype=np.float32),
+            "real_obs": Box(0, 1, (279, ), dtype=np.float32),
             "action_mask": Box(
                 0,
                 1, (NUM_DIMENSIONS + max_cuts_per_dimension + self.num_part_levels, ),
@@ -405,7 +405,7 @@ class NeuroCutsEnv(MultiAgentEnv):
         return rew
 
     def _zeros(self):
-        zeros = [0] * 278
+        zeros = [0] * 279
         return {
             "real_obs": zeros,
             "action_mask": [1] *

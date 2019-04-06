@@ -6,6 +6,7 @@ import pickle
 from gym.spaces import Tuple, Box, Discrete, Dict
 
 from ray.rllib.env import MultiAgentEnv
+from ray.rllib.evaluation.policy_evaluator import get_global_evaluator
 
 from tree import Tree, load_rules_from_file
 from hicuts import HiCuts
@@ -33,8 +34,14 @@ class NeuroCutsEnv(MultiAgentEnv):
                  reward_shape="linear",
                  depth_weight=1.0,
                  dump_dir=None,
+                 tree_gae=True,
+                 tree_gae_gamma=1.0,
+                 tree_gae_lambda=0.95,
                  zero_obs=False):
 
+        self.tree_gae = tree_gae
+        self.tree_gae_gamma = tree_gae_gamma
+        self.tree_gae_lambda = tree_gae_lambda
         self.reward_shape = {
             "linear": lambda x: x,
             "log": lambda x: np.log(x),
@@ -172,14 +179,25 @@ class NeuroCutsEnv(MultiAgentEnv):
                 or self.tree.get_current_node() is None):
             zero_state = self._zeros()
             rew = self.compute_rewards(self.depth_weight)
+            stats = {}
             obs = {node_id: zero_state for node_id in rew.keys()}
-            info = {node_id: {} for node_id in rew.keys()}
+            if self.tree_gae:
+                advantages, stats = self.compute_gae(self.depth_weight)
+                info = {
+                    node_id: {
+                        "__advantage__": advantages[node_id],
+                        "__value_target__": rew[node_id],
+                    }
+                    for node_id in rew.keys()
+                }
+            else:
+                info = {node_id: {} for node_id in rew.keys()}
             result = self.tree.compute_result()
             rules_remaining = set()
             for n in nodes_remaining:
                 for r in n.rules:
                     rules_remaining.add(str(r))
-            info[self.tree.root.id] = {
+            info[self.tree.root.id].update({
                 "bytes_per_rule": result["bytes_per_rule"],
                 "memory_access": result["memory_access"],
                 "exceeded_max_depth": len(self.exceeded_max_depth),
@@ -195,7 +213,8 @@ class NeuroCutsEnv(MultiAgentEnv):
                     ])) / len(self.node_map),
                 "num_splits": self.num_actions,
                 "rules_file": self.rules_file,
-            }
+            })
+            info[self.tree.root.id].update(stats)
             if not nodes_remaining and self.dump_dir:
                 self.save_if_best(result)
             return obs, rew, {"__all__": True}, info
@@ -233,6 +252,120 @@ class NeuroCutsEnv(MultiAgentEnv):
         cut_num = max(2, min(2**(action[1] + 1), range_right - range_left))
         return (cut_dimension, cut_num)
 
+    def compute_gae(self, depth_weight):
+        """Compute GAE for a branching decision environment.
+
+           V(d) = min over nodes n at depth=d V(n)
+        """
+
+        assert depth_weight == 1.0, "GAE not supported with space weight"
+
+        # First precompute the value of each node
+        V = {}
+        stats = {}
+        ev = get_global_evaluator()
+        assert ev.policy_config["use_gae"], ev.policy_config["use_gae"]
+        assert ev.policy_config["lambda"] == 1.0, ev.policy_config["lambda"]
+        policy = ev.get_policy()
+        prep = ev.preprocessors["default_policy"]
+        nlist = list(self.node_map.items())
+        feed_dict = {
+            policy.observations: [
+                prep.transform(self._encode_state(node)) for (_, node) in nlist
+            ],
+            policy.prev_actions: [[0, 0] for _ in nlist],
+            policy.prev_rewards: [0.0 for _ in nlist],
+            policy.model.seq_lens: [1 for _ in nlist],
+        }
+        vf = policy.sess.run(policy.value_function, feed_dict)
+        V_root = 0.0
+        for (node_id, _), v in zip(nlist, list(vf)):
+            V[node_id] = v
+            if node_id == self.tree.root.id:
+                V_root = v
+
+#        print(
+#            "Computed node values",
+#            "mean", np.mean(vf), "min", np.min(vf), "max", np.max(vf),
+#            "count", len(vf))
+        stats["V_gae_min"] = float(np.min(vf))
+        stats["V_gae_max"] = float(np.max(vf))
+        stats["V_gae_mean"] = float(np.mean(vf))
+        stats["V_gae_root"] = float(V_root)
+
+        gamma = self.tree_gae_gamma
+        lambd = self.tree_gae_lambda
+
+        # Map from node_id -> depth -> min(V at depth)
+        # These values are unique per (node_id, depth) combination
+        min_V_for_node = collections.defaultdict(dict)
+
+        # Then, compute the min V at each level for each subtree
+        incomplete = True
+        while incomplete:
+            incomplete = False
+            for node_id, node in self.node_map.items():
+                if node_id in min_V_for_node:
+                    continue
+
+                children = self.child_map.get(node_id, [])
+                if self.tree.is_leaf(node):
+                    min_V_for_node[node_id][node.depth] = -1
+                elif not children:
+                    min_V_for_node[node_id][node.depth] = V[node_id]
+                elif all((c_id in min_V_for_node) for c_id in children):
+                    min_V = {}
+                    for c_id in children:
+                        for depth, minv in min_V_for_node[c_id].items():
+                            if depth not in min_V:
+                                min_V[depth] = minv
+                            else:
+                                min_V[depth] = min(min_V[depth], minv)
+                    assert node.depth not in min_V, min_V
+                    min_V[node.depth] = V[node_id]
+                    min_V_for_node[node_id] = min_V
+                else:
+                    incomplete = True
+                    continue
+#                print(
+#                    "Computed minV for node", node_id, "depth", node.depth,
+#                    min_V_for_node[node_id])
+
+# delta(V)_{t+1} in the GAE paper
+
+        def deltaV(node_id, depth):
+            dv = -1 + gamma * min_V_for_node[node_id].get(d + 1, 0.0)
+            dv -= min_V_for_node[node_id][d]
+            return dv
+
+        # Now we can compute GAE estimates for each
+        advantages = {}
+        adv_list = []
+        adv_root = 0.0
+        for node_id, node in self.node_map.items():
+            A_gae = 0.0
+            d = node.depth
+            while d in min_V_for_node[node_id]:
+                A_gae += (gamma * lambd)**(d - node.depth) * deltaV(node_id, d)
+                d += 1
+#            print("A_gae for node", node_id, "depth", node.depth, A_gae)
+            adv_list.append(A_gae)
+            if node_id == self.tree.root.id:
+                adv_root = A_gae
+            advantages[node_id] = A_gae
+
+
+#        print(
+#            "GAE advantages",
+#            "min", np.min(adv_list), "max", np.max(adv_list),
+#            "mean", np.mean(adv_list))
+        stats["A_gae_min"] = float(np.min(adv_list))
+        stats["A_gae_max"] = float(np.max(adv_list))
+        stats["A_gae_mean"] = float(np.mean(adv_list))
+        stats["A_gae_root"] = float(adv_root)
+
+        return advantages, stats
+
     def compute_rewards(self, depth_weight):
         depth_to_go = collections.defaultdict(int)
         nodes_to_go = collections.defaultdict(int)
@@ -241,14 +374,18 @@ class NeuroCutsEnv(MultiAgentEnv):
             num_updates = 0
             for node_id, node in self.node_map.items():
                 if node_id not in depth_to_go:
-                    depth_to_go[node_id] = 0
-                    nodes_to_go[node_id] = 0
+                    if self.tree.is_leaf(node):
+                        depth_to_go[node_id] = 0
+                        nodes_to_go[node_id] = 0
+                    else:
+                        depth_to_go[node_id] = 1
+                        nodes_to_go[node_id] = 1
                 if node_id in self.child_map:
                     if self.node_map[node_id].is_partition():
-                        max_child_depth = sum(
+                        max_child_depth = self.tree_gae_gamma * sum(
                             [depth_to_go[c] for c in self.child_map[node_id]])
                     else:
-                        max_child_depth = 1 + max(
+                        max_child_depth = 1 + self.tree_gae_gamma * max(
                             [depth_to_go[c] for c in self.child_map[node_id]])
                     if max_child_depth > depth_to_go[node_id]:
                         depth_to_go[node_id] = max_child_depth

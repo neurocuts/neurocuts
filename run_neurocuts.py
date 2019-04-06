@@ -14,6 +14,8 @@ from ray import tune
 from ray.tune import run_experiments, grid_search
 from ray.tune.registry import register_env
 from ray.rllib.agents.ppo.ppo_policy_graph import PPOPolicyGraph
+from ray.rllib.evaluation.sample_batch import SampleBatch
+from ray.rllib.evaluation.postprocessing import Postprocessing
 
 from neurocuts_env import NeuroCutsEnv
 from mask import PartitionMaskModel
@@ -48,6 +50,8 @@ parser.add_argument(
     type=str,
     default="linear",
     help="Function to use for combining depth and size weights.")
+
+parser.add_argument("--gae-lambda", type=float, default=0.95)
 
 parser.add_argument(
     "--depth-weight",
@@ -101,6 +105,17 @@ def on_episode_end(info):
     episode.custom_metrics.update(info)
 
 
+def postprocess_gae(info):
+    traj = info["batch"]
+    infos = traj[SampleBatch.INFOS]
+    traj[Postprocessing.ADVANTAGES] = np.array(
+        [i["__advantage__"] for i in infos])
+    traj[Postprocessing.VALUE_TARGETS] = np.array(
+        [i["__value_target__"] for i in infos])
+#    print("override adv and v targets", traj[Postprocessing.ADVANTAGES],
+#          traj[Postprocessing.VALUE_TARGETS])
+
+
 if __name__ == "__main__":
     args = parser.parse_args()
     ray.init(redis_address=args.redis_address)
@@ -114,7 +129,10 @@ if __name__ == "__main__":
             depth_weight=env_config["depth_weight"],
             reward_shape=env_config["reward_shape"],
             partition_mode=env_config["partition_mode"],
-            zero_obs=env_config["zero_obs"]))
+            zero_obs=env_config["zero_obs"],
+            tree_gae=env_config["tree_gae"],
+            tree_gae_gamma=env_config["tree_gae_gamma"],
+            tree_gae_lambda=env_config["tree_gae_lambda"]))
 
     ModelCatalog.register_custom_model("mask", PartitionMaskModel)
 
@@ -126,6 +144,7 @@ if __name__ == "__main__":
                 "timesteps_total": 100000 if args.fast else 10000000,
             },
             "config": {
+                "log_level": "WARN",
                 "num_gpus": 0.2 if args.gpu else 0,
                 "num_workers": args.num_workers,
                 "sgd_minibatch_size": 100 if args.fast else 1000,
@@ -137,12 +156,16 @@ if __name__ == "__main__":
                     "custom_model": "mask",
                     "fcnet_hiddens": [512, 512],
                 },
-                "vf_share_layers": True,
+                "vf_share_layers": False,
                 "entropy_coeff": 0.01,
                 "callbacks": {
                     "on_episode_end": tune.function(on_episode_end),
+                    "on_postprocess_traj": tune.function(postprocess_gae),
                 },
                 "env_config": {
+                    "tree_gae": True,
+                    "tree_gae_gamma": 1.0,
+                    "tree_gae_lambda": grid_search([args.gae_lambda]),
                     "zero_obs": False,
                     "dump_dir": args.dump_dir,
                     "partition_mode": args.partition_mode,

@@ -13,7 +13,6 @@ import ray
 from ray import tune
 from ray.tune import run_experiments, grid_search
 from ray.tune.registry import register_env
-from ray.rllib.agents.ppo.ppo_policy_graph import PPOPolicyGraph
 from ray.rllib.evaluation.sample_batch import SampleBatch
 from ray.rllib.evaluation.postprocessing import Postprocessing
 

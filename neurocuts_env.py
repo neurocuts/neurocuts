@@ -84,7 +84,7 @@ class NeuroCutsEnv(MultiAgentEnv):
             Discrete(max_cuts_per_dimension + self.num_part_levels)
         ])
         self.observation_space = Dict({
-            "real_obs": Box(0, 1, (279, ), dtype=np.float32),
+            "real_obs": Box(0, 99999, (279, ), dtype=np.float32),
             "action_mask": Box(
                 0,
                 1, (NUM_DIMENSIONS + max_cuts_per_dimension + self.num_part_levels, ),
@@ -270,11 +270,11 @@ class NeuroCutsEnv(MultiAgentEnv):
         prep = ev.preprocessors["default_policy"]
         nlist = list(self.node_map.items())
         feed_dict = {
-            policy.observations: [
+            policy.get_placeholder("obs"): [
                 prep.transform(self._encode_state(node)) for (_, node) in nlist
             ],
-            policy.prev_actions: [[0, 0] for _ in nlist],
-            policy.prev_rewards: [0.0 for _ in nlist],
+            policy.get_placeholder("prev_actions"): [[0, 0] for _ in nlist],
+            policy.get_placeholder("prev_rewards"): [0.0 for _ in nlist],
             policy.model.seq_lens: [1 for _ in nlist],
         }
         vf = policy.sess.run(policy.value_function, feed_dict)
@@ -405,11 +405,11 @@ class NeuroCutsEnv(MultiAgentEnv):
         return rew
 
     def _zeros(self):
-        zeros = [0] * 279
+        zeros = np.array([0] * 279)
         return {
             "real_obs": zeros,
-            "action_mask": [1] *
-            (5 + self.max_cuts_per_dimension + self.num_part_levels),
+            "action_mask": np.array([1] *
+                (5 + self.max_cuts_per_dimension + self.num_part_levels)),
         }
 
     def _encode_state(self, node):
@@ -420,8 +420,8 @@ class NeuroCutsEnv(MultiAgentEnv):
             assert node.depth == 1, node.depth
             action_mask = ([1] * (NUM_DIMENSIONS + self.max_cuts_per_dimension)
                            + [1] * self.num_part_levels)
-        s = node.get_state()
+        s = np.array(node.get_state())
         return {
             "real_obs": np.zeros_like(s) if self.zero_obs else s,
-            "action_mask": action_mask,
+            "action_mask": np.array(action_mask),
         }

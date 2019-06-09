@@ -6,7 +6,7 @@ import pickle
 from gym.spaces import Tuple, Box, Discrete, Dict
 
 from ray.rllib.env import MultiAgentEnv
-from ray.rllib.evaluation.policy_evaluator import get_global_evaluator
+from ray.rllib.evaluation.rollout_worker import get_global_worker
 
 from tree import Tree, load_rules_from_file
 from hicuts import HiCuts
@@ -263,7 +263,7 @@ class NeuroCutsEnv(MultiAgentEnv):
         # First precompute the value of each node
         V = {}
         stats = {}
-        ev = get_global_evaluator()
+        ev = get_global_worker()
         assert ev.policy_config["use_gae"], ev.policy_config["use_gae"]
         assert ev.policy_config["lambda"] == 1.0, ev.policy_config["lambda"]
         policy = ev.get_policy()

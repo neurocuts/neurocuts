@@ -105,7 +105,7 @@ def on_episode_end(info):
 
 
 def postprocess_gae(info):
-    traj = info["batch"]
+    traj = info["post_batch"]
     infos = traj[SampleBatch.INFOS]
     traj[Postprocessing.ADVANTAGES] = np.array(
         [i["__advantage__"] for i in infos])

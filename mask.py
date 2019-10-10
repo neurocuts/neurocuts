@@ -1,9 +1,8 @@
-import tensorflow as tf
-import tensorflow.contrib.slim as slim
+import tensorflow.compat.v1 as tf
 
 import ray
 from ray.rllib.models import Model
-from ray.rllib.models.misc import normc_initializer
+from ray.rllib.models.tf.misc import normc_initializer
 
 
 class PartitionMaskModel(Model):
@@ -17,18 +16,18 @@ class PartitionMaskModel(Model):
         hiddens = options["fcnet_hiddens"]
         for i, size in enumerate(hiddens):
             label = "fc{}".format(i)
-            last_layer = slim.fully_connected(
+            last_layer = tf.layers.dense(
                 last_layer,
                 size,
-                weights_initializer=normc_initializer(1.0),
-                activation_fn=tf.nn.tanh,
-                scope=label)
-        action_logits = slim.fully_connected(
+                kernel_initializer=normc_initializer(1.0),
+                activation=tf.nn.tanh,
+                name=label)
+        action_logits = tf.layers.dense(
             last_layer,
             num_outputs,
-            weights_initializer=normc_initializer(0.01),
-            activation_fn=None,
-            scope="fc_out")
+            kernel_initializer=normc_initializer(0.01),
+            activation=None,
+            name="fc_out")
 
         if num_outputs == 1:
             return action_logits, last_layer

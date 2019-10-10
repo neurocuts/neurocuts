@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+
 import argparse
 import os
 import glob
@@ -159,10 +162,10 @@ if __name__ == "__main__":
                 "entropy_coeff": 0.01,
                 "callbacks": {
                     "on_episode_end": tune.function(on_episode_end),
-                    "on_postprocess_traj": tune.function(postprocess_gae),
+#                    "on_postprocess_traj": tune.function(postprocess_gae),
                 },
                 "env_config": {
-                    "tree_gae": True,
+                    "tree_gae": False,
                     "tree_gae_gamma": 1.0,
                     "tree_gae_lambda": grid_search([args.gae_lambda]),
                     "zero_obs": False,
